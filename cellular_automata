@@ -1,0 +1,88 @@
+#This is a simple implementation of cellular automata by convolutions and activation functions
+#It is inspired by the paper: Growing Neural Cellular Automata
+
+import tkinter as tk
+import numpy as np
+import math
+
+#Here we initialize the canvas and draw a 100 x 100 grid of squares
+
+root = tk.Tk()
+canvas = tk.Canvas(root, width=1000, height=1000)
+canvas.pack()
+
+image = np.ndarray((100,100), dtype=int)
+for i in range(100):
+    for j in range(100):
+        x1 = j * 10
+        y1 = i * 10
+        x2 = x1 + 10
+        y2 = y1 + 10
+        image[i][j] = canvas.create_rectangle(x1, y1, x2, y2, fill='white')
+
+
+#Here we choose a random initial condition for the state of the cells
+#You can alter the density of the initital condition by tweaking the .1
+
+cells = np.floor(np.random.rand(100,100) + .1)
+
+
+#This is an event listner that makes a cell go black when you click on it
+
+def on_click(event):
+    i = event.x // 10
+    j = event.y // 10
+    print('click:')
+    print((i,j))
+    cells[j][i] = -10
+
+canvas.bind("<Button-1>", on_click)
+
+#This function takes a value between 0 and 1 and returns a grayscale rgb code    
+
+def grayscale(x):
+    gray_value = round(x * 255)
+    return f"#{gray_value:02x}{gray_value:02x}{gray_value:02x}"
+
+
+
+
+#Here a random kernel is generated and the convolution function is defined
+
+kernel = np.random.uniform(low=-1, high=1, size=(3,3))
+kernel = np.flipud(np.fliplr(kernel))
+
+def convolve(cells, kernel):
+    output = np.random.rand(100,100)
+    cells = np.pad(cells, ((1, 1), (1, 1)), mode='wrap')
+    for i in range(1,101):
+        for j in range(1,101):
+            output[i-1, j-1] = np.sum(cells[i-1:i+2, j-1:j+2] * kernel)
+    return output
+
+
+#This is the activation function.
+#Currently it is a sinusoid function, but it can be anything you want.
+#Multiplying x by the 1.5 factor increases the contrast of the animation
+
+def activation(x):
+    #return 1 / (1 + math.exp(-1.5 * x))
+    return max(0, min(1, math.tan(x)))
+activation = np.vectorize(activation)
+
+
+
+#The update function is called between each frame update.
+#First we change the color of the pixels in the image, then we convolve and activate the cells
+
+def update():
+    global cells, kernel, image
+    for i in range(100):
+        for j in range(100):
+            color = grayscale(cells[i][j])
+            canvas.itemconfig(image[i][j], fill=color)
+    cells = activation(convolve(cells, kernel))
+    canvas.after(1, update)
+
+update()
+root.mainloop()       
